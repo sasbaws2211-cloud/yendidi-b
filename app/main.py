@@ -21,7 +21,11 @@ from app.api import (
 )
 from app.db.session import engine
 
-app = FastAPI(title="Y3ndidi Backend", version="0.1.0")
+app = FastAPI(title="Y3ndidi Backend", 
+              version="0.1.0",
+              docs_url="/v1/docs"
+
+      )
 
 register_middleware(app)
 router = APIRouter(prefix="/v1")
