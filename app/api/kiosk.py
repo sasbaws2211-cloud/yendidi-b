@@ -92,8 +92,8 @@ async def create_kiosk(
     current_user: User = Depends(get_current_user),
     session: AsyncSession = Depends(get_session),
 ):
-    if current_user.role != Role.super_admin:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only platform admins may provision a kiosk")
+    if current_user.role != Role.school_admin and current_user.role != Role.super_admin:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only school admins may provision a kiosk")
 
     exit_pin = _validate_exit_pin(request.exit_pin)
     code = _generate_code()
