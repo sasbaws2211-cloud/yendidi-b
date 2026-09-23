@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
@@ -51,7 +51,7 @@ class RefreshToken(SQLModel, table=True):
     expires_at: datetime
     revoked_at: Optional[datetime]
     replaced_by: Optional[UUID] = Field(foreign_key="refreshtoken.id")
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 
 class OTPPurpose(str, Enum):

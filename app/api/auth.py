@@ -1,5 +1,5 @@
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from uuid import UUID
 import secrets
@@ -35,6 +35,10 @@ from app.db.session import AsyncSession
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
+
+
+def _utc_now() -> datetime:
+    return datetime.now(timezone.utc)
 
 
 class LoginRequest(BaseModel):
@@ -163,8 +167,8 @@ async def request_otp(request: OtpRequest, session: AsyncSession = Depends(get_s
         recipient=user.email or request.identifier,
         purpose=request.purpose,
         code_hash=hash_token(code),
-        expires_at=datetime.utcnow() + timedelta(minutes=10),
-        created_at=datetime.utcnow(),
+        expires_at=_utc_now() + timedelta(minutes=10),
+        created_at=_utc_now(),
     )
     session.add(otp)
     await session.commit()
@@ -185,7 +189,7 @@ async def verify_otp(request: OtpVerifyRequest, session: AsyncSession = Depends(
         .where(
             OneTimePassword.user_id == user.id,
             OneTimePassword.used_at.is_(None),
-            OneTimePassword.expires_at > datetime.utcnow(),
+            OneTimePassword.expires_at > _utc_now(),
         )
         .order_by(OneTimePassword.created_at.desc())
     )
@@ -194,7 +198,7 @@ async def verify_otp(request: OtpVerifyRequest, session: AsyncSession = Depends(
     if not otp or hash_token(request.code) != otp.code_hash:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid OTP code")
 
-    otp.used_at = datetime.utcnow()
+    otp.used_at = _utc_now()
     session.add(otp)
     await session.commit()
 
@@ -207,8 +211,8 @@ async def verify_otp(request: OtpVerifyRequest, session: AsyncSession = Depends(
         user_id=user.id,
         token_hash=hash_token(refresh_plain),
         device_id=request.device_id,
-        expires_at=datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days),
-        created_at=datetime.utcnow(),
+        expires_at=_utc_now() + timedelta(days=settings.refresh_token_expire_days),
+        created_at=_utc_now(),
     )
     session.add(refresh)
     await session.commit()
@@ -233,8 +237,8 @@ async def login(request: LoginRequest, session: AsyncSession = Depends(get_sessi
         user_id=user.id,
         token_hash=hash_token(refresh_plain),
         device_id=request.device_id,
-        expires_at=datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days),
-        created_at=datetime.utcnow(),
+        expires_at=_utc_now() + timedelta(days=settings.refresh_token_expire_days),
+        created_at=_utc_now(),
     )
     session.add(refresh)
     await session.commit()
@@ -248,7 +252,7 @@ async def refresh_token(request: RefreshRequest, session: AsyncSession = Depends
     statement = select(RefreshToken).where(RefreshToken.token_hash == hash_value)
     result = await session.execute(statement)
     refresh = result.scalar_one_or_none()
-    if not refresh or refresh.revoked_at is not None or refresh.expires_at < datetime.utcnow():
+    if not refresh or refresh.revoked_at is not None or refresh.expires_at < _utc_now():
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid refresh token")
 
     user_stmt = select(User).where(User.id == refresh.user_id)
@@ -265,8 +269,8 @@ async def refresh_token(request: RefreshRequest, session: AsyncSession = Depends
             user_id=user.id,
             token_hash=hash_token(new_refresh_plain),
             device_id=refresh.device_id,
-            expires_at=datetime.utcnow() + timedelta(days=settings.refresh_token_expire_days),
-            created_at=datetime.utcnow(),
+            expires_at=_utc_now() + timedelta(days=settings.refresh_token_expire_days),
+            created_at=_utc_now(),
         )
     )
     # Flushed before the old row is revoked: `replaced_by` is a plain FK column
@@ -274,7 +278,7 @@ async def refresh_token(request: RefreshRequest, session: AsyncSession = Depends
     # has no dependency to order by and can flush this update before the insert
     # it points at — which asyncpg then rejects outright.
     await session.flush()
-    refresh.revoked_at = datetime.utcnow()
+    refresh.revoked_at = _utc_now()
     refresh.replaced_by = replacement_id
     session.add(refresh)
     await session.commit()
@@ -299,7 +303,7 @@ async def logout(request: LogoutRequest, session: AsyncSession = Depends(get_ses
     result = await session.execute(statement)
     refresh = result.scalar_one_or_none()
     if refresh and refresh.revoked_at is None:
-        refresh.revoked_at = datetime.utcnow()
+        refresh.revoked_at = _utc_now()
         session.add(refresh)
         await session.commit()
     return {"status": "ok"}
