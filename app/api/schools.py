@@ -113,6 +113,7 @@ class SchoolEnrollmentResult(BaseModel):
 # way" — enrollment is the one place that guarantee has to be enforced.
 SUPPORTED_FACE_MODELS = {
     "arcface-r100-v1": 512,
+    "virtuoturing-v1": 512,
 }
 
 

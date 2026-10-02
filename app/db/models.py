@@ -3,7 +3,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 from uuid import UUID
 
-from sqlalchemy import Column, JSON, String, UniqueConstraint, text
+from sqlalchemy import Column, DateTime, JSON, String, UniqueConstraint, text
 from sqlmodel import Field, SQLModel
 
 
@@ -48,10 +48,10 @@ class RefreshToken(SQLModel, table=True):
     user_id: UUID = Field(foreign_key="user.id")
     token_hash: str
     device_id: str
-    expires_at: datetime
-    revoked_at: Optional[datetime]
+    expires_at: datetime = Field(sa_type=DateTime(timezone=True))
+    revoked_at: Optional[datetime] = Field(default=None, sa_type=DateTime(timezone=True))
     replaced_by: Optional[UUID] = Field(foreign_key="refreshtoken.id")
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_type=DateTime(timezone=True))
 
 
 class OTPPurpose(str, Enum):
@@ -66,10 +66,10 @@ class OneTimePassword(SQLModel, table=True):
     recipient: str
     purpose: OTPPurpose
     code_hash: str
-    expires_at: datetime
-    used_at: Optional[datetime]
+    expires_at: datetime = Field(sa_type=DateTime(timezone=True))
+    used_at: Optional[datetime] = Field(default=None, sa_type=DateTime(timezone=True))
     attempts: int = Field(default=0)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), sa_type=DateTime(timezone=True))
 
 
 class SchoolStatus(str, Enum):

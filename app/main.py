@@ -1,3 +1,4 @@
+import asyncio
 from fastapi import APIRouter, FastAPI
 from sqlmodel import SQLModel
 from middleware import register_middleware
@@ -6,6 +7,7 @@ from app.api import (
     admin,
     auth,
     catalog,
+    face_model,
     favorites,
     guardian_links,
     kiosk,
@@ -45,6 +47,7 @@ router.include_router(favorites.router, prefix="", tags=["favorites"])
 router.include_router(admin.router, prefix="", tags=["admin"])
 router.include_router(guardian_links.router, prefix="", tags=["guardian-links"])
 router.include_router(kiosk.router, prefix="", tags=["kiosk"])
+router.include_router(face_model.router, prefix="", tags=["face-model"])
 router.include_router(webhooks.router, prefix="/webhooks", tags=["webhooks"])
 
 app.include_router(router)
@@ -54,6 +57,8 @@ app.include_router(router)
 async def on_startup() -> None:
     async with engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
+    # Background: a model download must not delay the API coming up.
+    app.state.face_model_task = asyncio.create_task(face_model.ensure_face_model())
 
 
 @app.on_event("shutdown")
