@@ -1,0 +1,2 @@
+*.onnx filter=lfs diff=lfs merge=lfs -text
+models/virtuoturing-v1.onnx filter=lfs diff=lfs merge=lfs -text
